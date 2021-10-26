@@ -4,8 +4,8 @@ import "html/template"
 
 //creates new view object, parses all the template files given, and returns what is necessary to us as View type
 func NewView(files ...string) *View {
-	// appends all files we provide to this func to the files arg
-	files = append(files, "views/layout/footer.gohtml")
+	// appends all files we provide to this func to the files arg in this case it's our template for footer, may also need one for header, etc. may change for each section
+	files = append(files, "views/layouts/footer.gohtml")
 
 	t, err := template.ParseFiles(files...)
 	if err != nil {
