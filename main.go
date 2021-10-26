@@ -33,11 +33,11 @@ func contact(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	var err error
-	homeTemplate, err = template.ParseFiles("views/home.gohtml") // don't use colon/equal, :=,  here to set the variable as we have already declated it above and don't want to redeclare
+	homeTemplate, err = template.ParseFiles("views/home.gohtml", "views/layouts/footer.gohtml") // don't use colon/equal, :=,  here to set the variable as we have already declated it above and don't want to redeclare
 	if err != nil {
 		panic(err)
 	}
-	contactTemplate, err = template.ParseFiles("views/contact.gohtml")
+	contactTemplate, err = template.ParseFiles("views/contact.gohtml", "views/layouts/footer.gohtml")
 	if err != nil {
 		panic(err)
 	}
