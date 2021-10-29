@@ -10,6 +10,7 @@ import (
 var (
 	homeView    *views.View
 	contactView *views.View
+	signupView  *views.View
 )
 
 // response for homePage
@@ -24,17 +25,24 @@ func contact(w http.ResponseWriter, r *http.Request) {
 	must(contactView.Render(w, nil))
 }
 
+func signup(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	must(signupView.Render(w, nil))
+}
+
 func main() {
 	// we run these two funcs here to parse the html files when we first set up and start our project.
 	// this way we know right away if we have issues with our html pages (the errors/panic happen on view.go)
 	// vs waiting until someone hits the page and then finding out there we have error from our templates
 	// they will not be "execute/render" until each page is hit, which is fine.
-	homeView = views.NewView("bootstrap", "views/home.gohtml")
+	homeView = views.NewView("bootstrap", "views/home.gohtml") // bootstrap is from the views/layouts/folder
 	contactView = views.NewView("bootstrap", "views/contact.gohtml")
+	signupView = views.NewView("bootstrap", "views/signup.gohtml")
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", home)
 	r.HandleFunc("/contact", contact)
+	r.HandleFunc("/signup", signup)
 	http.ListenAndServe(":3000", r)
 }
 
