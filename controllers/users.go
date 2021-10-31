@@ -30,5 +30,13 @@ func (u *Users) New(w http.ResponseWriter, r *http.Request) {
 // Create is u sed to process the signup form when a user submits it. This is used to create a new user account
 // POST /signup
 func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "This is temporary response")
+	if err := r.ParseForm(); err != nil {
+		panic(err)
+	}
+	// returns map of strings
+	fmt.Fprintln(w, r.PostForm["email"])
+	// returns first value in those strings
+	fmt.Fprintln(w, r.PostFormValue("email"))
+	fmt.Fprintln(w, r.PostForm["password"])
+	fmt.Fprintln(w, r.PostFormValue("password"))
 }
