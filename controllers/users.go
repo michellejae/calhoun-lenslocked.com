@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gorilla/schema"
 	"gitlab.com/michellejae/lenslocked.com/views"
 )
 
@@ -27,16 +28,23 @@ func (u *Users) New(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// struct tags are not checked by compilier or something
+type SignupForm struct {
+	Email    string `schema:"email"`
+	Password string `schema:"password"`
+}
+
 // Create is u sed to process the signup form when a user submits it. This is used to create a new user account
 // POST /signup
 func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		panic(err)
 	}
-	// returns map of strings
-	fmt.Fprintln(w, r.PostForm["email"])
-	// returns first value in those strings
-	fmt.Fprintln(w, r.PostFormValue("email"))
-	fmt.Fprintln(w, r.PostForm["password"])
-	fmt.Fprintln(w, r.PostFormValue("password"))
+
+	dec := schema.NewDecoder()
+	var form SignupForm
+	if err := dec.Decode(&form, r.PostForm); err != nil {
+		panic(err)
+	}
+	fmt.Fprintln(w, form)
 }
