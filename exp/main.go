@@ -16,9 +16,17 @@ const (
 
 type User struct {
 	gorm.Model
-	Name  string
-	Email string `gorm:"not null;unique_index"`
-	Color string
+	Name   string
+	Email  string `gorm:"not null;unique_index"`
+	Color  string
+	Orders []Order
+}
+
+type Order struct {
+	gorm.Model
+	UserID      uint
+	Amount      int
+	Description string
 }
 
 func main() {
@@ -32,7 +40,7 @@ func main() {
 	// shows us what sql statemetns gorm is running
 	db.LogMode(true)
 	//db.DropTableIfExists(&User{})
-	db.AutoMigrate(&User{})
+	db.AutoMigrate(&User{}, &Order{})
 
 	//var u User
 	// QUERY 1
@@ -66,7 +74,7 @@ func main() {
 	// fmt.Println(len(users))
 	// fmt.Println(users)
 
-	var u User
+	//var u User
 	// newDB := db.Where("email = ?", "blahs")
 	// newDB = newDB.Or("color = ?", "blue")
 	// newDB = newDB.First(&u)
@@ -104,14 +112,38 @@ func main() {
 	// }
 
 	// ERROR 4
-	db = db.Where("email = ?", "blah").First(&u)
-	if err := db.Where("email = ?", "blah").First(&u).Error; err != nil {
-		switch err {
-		case gorm.ErrRecordNotFound:
-			fmt.Println("no user found")
-		default:
-			panic(err)
-		}
+	// db = db.Where("email = ?", "blah").First(&u)
+	// if err := db.Where("email = ?", "blah").First(&u).Error; err != nil {
+	// 	switch err {
+	// 	case gorm.ErrRecordNotFound:
+	// 		fmt.Println("no user found")
+	// 	default:
+	// 		panic(err)
+	// 	}
+	// }
+	// fmt.Println(u)
+
+	// RELATIONAL DATABASE USER STUFF
+	var u User
+	if err := db.Preload("Orders").First(&u).Error; err != nil {
+		panic(err)
 	}
 	fmt.Println(u)
+	fmt.Println(u.Orders)
+
+	// added orders to DB
+	// createOrder(db, u, 1001, "Chicken Wings")
+	// createOrder(db, u, 999, "Fries")
+	// createOrder(db, u, 100, "Ranch")
 }
+
+// func createOrder(db *gorm.DB, user User, amount int, desc string) {
+// 	err := db.Create(&Order{
+// 		UserID:      user.ID,
+// 		Amount:      amount,
+// 		Description: desc,
+// 	}).Error
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// }
