@@ -55,6 +55,7 @@ func main() {
 }
 
 func getInfo() (name, email, color string) {
+	// os.Stdin prints to terminal / console
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("What is your name?")
 	name, _ = reader.ReadString('\n')
