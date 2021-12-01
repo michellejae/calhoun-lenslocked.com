@@ -35,31 +35,83 @@ func main() {
 	db.AutoMigrate(&User{})
 
 	//var u User
-
+	// QUERY 1
 	// db.First(&u)
 	// db.Last(&u)
 
+	// QEURTY TWO
 	// can add in the second parameter with rfirst to qeruty taht specific user with that id
 	//db.First(&u, 3)
 	// longer version of above
 	// db = db.Where("id = ?", 3)
 	// db.First(&u)
 
+	//QUERY 3
 	// note the ?, it's like the $ from psql and the . after each line
 	// db.Where("color = ?", "blue").
 	// 	Where("id > ?", 2).
 	// 	First(&u)
 
+	// QUERY 4
 	// var u User = User{
 	// 	Color: "blue",
 	// 	Name:  "meeeee",
 	// }
 	// db.Where(u).First(&u)
 
+	// QUERY 5
 	// mulitple users
-	var users []User
-	db.Find(&users)
-	fmt.Println(len(users))
-	fmt.Println(users)
+	// var users []User
+	// db.Find(&users)
+	// fmt.Println(len(users))
+	// fmt.Println(users)
 
+	var u User
+	// newDB := db.Where("email = ?", "blahs")
+	// newDB = newDB.Or("color = ?", "blue")
+	// newDB = newDB.First(&u)
+
+	// ERROR NO WORK
+	// THIS DOES NOT PANIC EVEN THOUGH IT SHOULD
+	// db.Where("email = ?", "blah").First(&u)
+	// if db.Error != nil {
+	// 	panic(err)
+	// }
+
+	// ERROR 1
+	// THIS DOES PANIC cause we assign it to a new variable and check THAT error
+	// newDB := db.Where("email = ?", "blah").First(&u)
+	// if newDB.Error != nil {
+	// 	panic(err)
+	// }
+
+	// ERROR 2
+	// db = db.Where("email = ?", "blah").First(&u)
+	// errors := db.GetErrors()
+	// if len(errors) > 0 {
+	// 	fmt.Println(errors)
+	// 	os.Exit(1)
+	// }
+
+	//ERROR 3
+	// db = db.Where("email = ?", "blah").First(&u)
+	// if db.RecordNotFound() {
+	// 	fmt.Println("No user found")
+	// } else if db.Error != nil {
+	// 	panic(db.Error)
+	// } else {
+	// 	fmt.Println(u)
+	// }
+
+	// ERROR 4
+	db = db.Where("email = ?", "blah").First(&u)
+	if err := db.Where("email = ?", "blah").First(&u).Error; err != nil {
+		switch err {
+		case gorm.ErrRecordNotFound:
+			fmt.Println("no user found")
+		default:
+			panic(err)
+		}
+	}
+	fmt.Println(u)
 }
