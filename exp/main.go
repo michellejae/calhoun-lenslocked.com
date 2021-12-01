@@ -14,6 +14,12 @@ const (
 	dbname = "lenslocked_dev"
 )
 
+type User struct {
+	gorm.Model
+	Name  string
+	Email string `gorm:"not null;unique_index"`
+}
+
 func main() {
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable", host, port, user, dbname)
 	db, err := gorm.Open("postgres", psqlInfo)
@@ -25,5 +31,8 @@ func main() {
 	if err := db.DB().Ping(); err != nil {
 		panic(err)
 	}
+
+	//db.DropTableIfExists(&User{})
+	//db.AutoMigrate(&User{})
 
 }
