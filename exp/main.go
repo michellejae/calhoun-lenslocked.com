@@ -1,10 +1,7 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"os"
-	"strings"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -32,40 +29,37 @@ func main() {
 	}
 	defer db.Close()
 
-	if err := db.DB().Ping(); err != nil {
-		panic(err)
-	}
-
 	// shows us what sql statemetns gorm is running
 	db.LogMode(true)
 	//db.DropTableIfExists(&User{})
 	db.AutoMigrate(&User{})
 
-	name, email, color := getInfo()
-	u := User{
-		Name:  name,
-		Email: email,
-		Color: color,
-	}
-	if err = db.Create(&u).Error; err != nil {
-		panic(err)
-	}
-	fmt.Printf("%+v\n", u)
+	//var u User
 
-}
+	// db.First(&u)
+	// db.Last(&u)
 
-func getInfo() (name, email, color string) {
-	// os.Stdin prints to terminal / console
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Println("What is your name?")
-	name, _ = reader.ReadString('\n')
-	fmt.Println("What is your email address?")
-	email, _ = reader.ReadString('\n')
-	fmt.Println("What is your fav color?")
-	color, _ = reader.ReadString('\n')
-	name = strings.TrimSpace(name)
-	email = strings.TrimSpace(email)
-	color = strings.TrimSpace(color)
-	return name, email, color
+	// can add in the second parameter with rfirst to qeruty taht specific user with that id
+	//db.First(&u, 3)
+	// longer version of above
+	// db = db.Where("id = ?", 3)
+	// db.First(&u)
+
+	// note the ?, it's like the $ from psql and the . after each line
+	// db.Where("color = ?", "blue").
+	// 	Where("id > ?", 2).
+	// 	First(&u)
+
+	// var u User = User{
+	// 	Color: "blue",
+	// 	Name:  "meeeee",
+	// }
+	// db.Where(u).First(&u)
+
+	// mulitple users
+	var users []User
+	db.Find(&users)
+	fmt.Println(len(users))
+	fmt.Println(users)
 
 }
