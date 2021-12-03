@@ -49,6 +49,11 @@ func (us *UserService) ByID(id uint) (*User, error) {
 	}
 }
 
+//Creat provided user and backfill data like the ID, CreatedAt and UpdatedAt fields
+func (us *UserService) Create(user *User) error {
+	return us.db.Create(user).Error
+}
+
 // method only used in development to reset database just to make sure we are starting fresh
 // drops user table and rebuilds it
 func (us *UserService) DestructiveReset() {
