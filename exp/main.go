@@ -56,6 +56,12 @@ func main() {
 	}
 	fmt.Println(userByEmail)
 
+	userByID, err := us.ByID(user.ID)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(userByID)
+
 	// shows us what sql statemetns gorm is running
 	//db.LogMode(true)
 	//db.DropTableIfExists(&User{})

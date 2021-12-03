@@ -38,30 +38,26 @@ type UserService struct {
 // as a general rule, any error but ErrNotFound should probaly result in a 500 error
 func (us *UserService) ByID(id uint) (*User, error) {
 	var user User
-	err := us.db.Where("id = ?", id).First(&user).Error
-	switch err {
-	case nil:
-		return &user, nil
-	case gorm.ErrRecordNotFound:
-		return nil, ErrNotFound
-	default:
-		return nil, err
-	}
+	db := us.db.Where("id = ?", id)
+	err := first(db, &user)
+	return &user, err
 }
 
 // same as above but byEMAIL
 func (us *UserService) ByEmail(email string) (*User, error) {
 	// this is the user where we play the return from the db
 	var user User
-	err := us.db.Where("email = ?", email).First(&user).Error
-	switch err {
-	case nil:
-		return &user, nil
-	case gorm.ErrRecordNotFound:
-		return nil, ErrNotFound
-	default:
-		return nil, err
+	db := us.db.Where("email = ?", email)
+	err := first(db, &user)
+	return &user, err
+}
+
+func first(db *gorm.DB, user *User) error {
+	err := db.First(user).Error
+	if err == gorm.ErrRecordNotFound {
+		return ErrNotFound
 	}
+	return err
 }
 
 //Creat provided user and backfill data like the ID, CreatedAt and UpdatedAt fields
