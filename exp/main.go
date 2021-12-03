@@ -37,21 +37,24 @@ func main() {
 		panic(err)
 	}
 	defer us.Close()
-	// us.DestructiveReset()
-	// user := models.User{
-	// 	Name:  "Michael Scott",
-	// 	Email: "michael@dundermifflin.com",
-	// }
+	us.DestructiveReset()
+	user := models.User{
+		Name:  "Michael Scott",
+		Email: "michael@dundermifflin.com",
+	}
 
-	// if err := us.Create(&user); err != nil {
-	// 	panic(err)
-	// }
-
-	user, err := us.ByID(1)
+	if err := us.Create(&user); err != nil {
+		panic(err)
+	}
+	user.Email = "michael@michaelscottpaper.com"
+	if err := us.Update(&user); err != nil {
+		panic(err)
+	}
+	userByID, err := us.ByID(user.ID)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(user)
+	fmt.Println(userByID)
 
 	// shows us what sql statemetns gorm is running
 	//db.LogMode(true)

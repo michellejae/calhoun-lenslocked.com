@@ -54,16 +54,23 @@ func (us *UserService) Create(user *User) error {
 	return us.db.Create(user).Error
 }
 
-// method only used in development to reset database just to make sure we are starting fresh
-// drops user table and rebuilds it
-func (us *UserService) DestructiveReset() {
-	us.db.DropTableIfExists(&User{})
-	us.db.AutoMigrate(&User{})
+// will update the provied user with the provided user object
+// note that you ahve to provide ALL fields whether their data is updatd or not
+// ie if the email is staying the same and you don't provide it, it will delete
+func (us *UserService) Update(user *User) error {
+	return us.db.Save(user).Error
 }
 
 // closes the UserService DB connection
 func (us *UserService) Close() error {
 	return us.db.Close()
+}
+
+// method only used in development to reset database just to make sure we are starting fresh
+// drops user table and rebuilds it
+func (us *UserService) DestructiveReset() {
+	us.db.DropTableIfExists(&User{})
+	us.db.AutoMigrate(&User{})
 }
 
 type User struct {
