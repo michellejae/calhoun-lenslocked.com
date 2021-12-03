@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"gitlab.com/michellejae/lenslocked.com/models"
 )
 
 const (
@@ -14,33 +14,39 @@ const (
 	dbname = "lenslocked_dev"
 )
 
-type User struct {
-	gorm.Model
-	Name   string
-	Email  string `gorm:"not null;unique_index"`
-	Color  string
-	Orders []Order
-}
+// type User struct {
+// 	gorm.Model
+// 	Name   string
+// 	Email  string `gorm:"not null;unique_index"`
+// 	Color  string
+// 	Orders []Order
+// }
 
-type Order struct {
-	gorm.Model
-	UserID      uint
-	Amount      int
-	Description string
-}
+// type Order struct {
+// 	gorm.Model
+// 	UserID      uint
+// 	Amount      int
+// 	Description string
+// }
 
 func main() {
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable", host, port, user, dbname)
-	db, err := gorm.Open("postgres", psqlInfo)
+	us, err := models.NewUserService(psqlInfo)
 	if err != nil {
 		panic(err)
 	}
-	defer db.Close()
+	defer us.Close()
+	// us.DestructiveReset()
+	user, err := us.ByID(1)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(user)
 
 	// shows us what sql statemetns gorm is running
-	db.LogMode(true)
+	//db.LogMode(true)
 	//db.DropTableIfExists(&User{})
-	db.AutoMigrate(&User{}, &Order{})
+	//db.AutoMigrate(&User{}, &Order{})
 
 	//var u User
 	// QUERY 1
@@ -124,12 +130,12 @@ func main() {
 	// fmt.Println(u)
 
 	// RELATIONAL DATABASE USER STUFF
-	var u User
-	if err := db.Preload("Orders").First(&u).Error; err != nil {
-		panic(err)
-	}
-	fmt.Println(u)
-	fmt.Println(u.Orders)
+	// var u User
+	// if err := db.Preload("Orders").First(&u).Error; err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Println(u)
+	// fmt.Println(u.Orders)
 
 	// added orders to DB
 	// createOrder(db, u, 1001, "Chicken Wings")
