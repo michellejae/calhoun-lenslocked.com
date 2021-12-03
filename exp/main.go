@@ -50,11 +50,11 @@ func main() {
 	if err := us.Update(&user); err != nil {
 		panic(err)
 	}
-	userByID, err := us.ByID(user.ID)
+	userByEmail, err := us.ByEmail("michael@michaelscottpaper.com")
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(userByID)
+	fmt.Println(userByEmail)
 
 	// shows us what sql statemetns gorm is running
 	//db.LogMode(true)

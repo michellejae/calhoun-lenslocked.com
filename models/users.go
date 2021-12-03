@@ -49,6 +49,21 @@ func (us *UserService) ByID(id uint) (*User, error) {
 	}
 }
 
+// same as above but byEMAIL
+func (us *UserService) ByEmail(email string) (*User, error) {
+	// this is the user where we play the return from the db
+	var user User
+	err := us.db.Where("email = ?", email).First(&user).Error
+	switch err {
+	case nil:
+		return &user, nil
+	case gorm.ErrRecordNotFound:
+		return nil, ErrNotFound
+	default:
+		return nil, err
+	}
+}
+
 //Creat provided user and backfill data like the ID, CreatedAt and UpdatedAt fields
 func (us *UserService) Create(user *User) error {
 	return us.db.Create(user).Error
