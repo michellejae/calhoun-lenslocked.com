@@ -10,6 +10,9 @@ import (
 var (
 	// return when a resource cannot be found in DB
 	ErrNotFound = errors.New("models: resource not found")
+
+	// returned when an invalid id is provided to a mehod like delete
+	ErrInvalidID = errors.New("models: id provided was invalid")
 )
 
 // how we connect to DB
@@ -52,8 +55,11 @@ func (us *UserService) ByEmail(email string) (*User, error) {
 	return &user, err
 }
 
-func first(db *gorm.DB, user *User) error {
-	err := db.First(user).Error
+// first will query using provided gorm.db and will
+// get first item return and place it into dst
+// if nothing is return (or fround in query) it will return err not found
+func first(db *gorm.DB, dst interface{}) error {
+	err := db.First(dst).Error
 	if err == gorm.ErrRecordNotFound {
 		return ErrNotFound
 	}
@@ -70,6 +76,17 @@ func (us *UserService) Create(user *User) error {
 // ie if the email is staying the same and you don't provide it, it will delete
 func (us *UserService) Update(user *User) error {
 	return us.db.Save(user).Error
+}
+
+// will delete the user with the provided ID
+func (us *UserService) Delete(id uint) error {
+	if id == 0 {
+		return ErrInvalidID
+	}
+
+	// have to actually specify model to get acces to gorm.Model to get the ID
+	user := User{Model: gorm.Model{ID: id}}
+	return us.db.Delete(&user).Error
 }
 
 // closes the UserService DB connection
