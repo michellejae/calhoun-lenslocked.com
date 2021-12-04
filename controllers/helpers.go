@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/schema"
 )
 
-func (u *Users) parseForm(r *http.Request, dst interface{}) error {
+func parseForm(r *http.Request, dst interface{}) error {
 	// parseform causing r.PostForm field to be filled with data from sign up form
 	if err := r.ParseForm(); err != nil {
 		return err
