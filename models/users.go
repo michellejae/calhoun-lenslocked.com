@@ -2,9 +2,12 @@ package models
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"gitlab.com/michellejae/lenslocked.com/hash"
+	"gitlab.com/michellejae/lenslocked.com/rand"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -19,6 +22,7 @@ var (
 )
 
 const userPwPepper = "booopity-beep-berp"
+const hmacSecretKey = "secret-hmac-key"
 
 // how we connect to DB
 func NewUserService(connectionInfo string) (*UserService, error) {
@@ -27,14 +31,18 @@ func NewUserService(connectionInfo string) (*UserService, error) {
 		return nil, err
 	}
 	db.LogMode(true)
+	hmac := hash.NewHmac(hmacSecretKey)
 	return &UserService{
-		db: db,
+		db:   db,
+		hmac: hmac,
 	}, nil
 }
 
 // access gorm to give acces to DB model
+// access hmac that we wrote to hash tokens
 type UserService struct {
-	db *gorm.DB
+	db   *gorm.DB
+	hmac hash.HMAC
 }
 
 // ByID will look up a user with provided ID.
@@ -58,6 +66,24 @@ func (us *UserService) ByEmail(email string) (*User, error) {
 	db := us.db.Where("email = ?", email)
 	err := first(db, &user)
 	return &user, err
+}
+
+// looks up a user with the given remember token and retunr thats user
+// this method will handle hashing the token for us
+// errors are the same as byEmail
+func (us *UserService) ByRemember(token string) (*User, error) {
+
+	var user User
+	rememberHash := us.hmac.Hash(token)
+	fmt.Println("HERERRE", rememberHash)
+	// query has to use remember_hash even though we save it as RememberHash down below
+	err := first(us.db.Where("remember_hash = ?", rememberHash), &user)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+
 }
 
 // can be used to authenticate a user with the provided email address and password
@@ -104,6 +130,17 @@ func (us *UserService) Create(user *User) error {
 	}
 	user.PasswordHash = string(hashedBytes)
 	user.Password = ""
+
+	if user.Remember == "" {
+		token, err := rand.RememberToken()
+		if err != nil {
+			return err
+		}
+		user.Remember = token
+	}
+
+	user.RememberHash = us.hmac.Hash(user.Remember)
+
 	return us.db.Create(user).Error
 }
 
@@ -111,6 +148,9 @@ func (us *UserService) Create(user *User) error {
 // note that you ahve to provide ALL fields whether their data is updatd or not
 // ie if the email is staying the same and you don't provide it, it will delete
 func (us *UserService) Update(user *User) error {
+	if user.Remember != "" {
+		user.RememberHash = us.hmac.Hash(user.Remember)
+	}
 	return us.db.Save(user).Error
 }
 
@@ -154,4 +194,6 @@ type User struct {
 	Email        string `gorm:"not null;unique_index"`
 	Password     string `gorm:"-"` //- means ignore this and don't store in db
 	PasswordHash string `gorm:"not null"`
+	Remember     string `gorm:"-"`
+	RememberHash string `gorm:"not null;unique_index"`
 }
