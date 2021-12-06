@@ -95,3 +95,14 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, user)
 
 }
+
+//used to display cookies set on current user (only use during development, delete for productions)
+func (u *Users) CookieTest(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("email")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintln(w, "Email is:", cookie.Value)
+	fmt.Fprintln(w, cookie)
+}
