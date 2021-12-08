@@ -1,45 +1,45 @@
 package main
 
-import (
-	"fmt"
+import "fmt"
 
-	"gitlab.com/michellejae/lenslocked.com/models"
-)
+type Dog struct{}
+type Cat struct{}
 
-const (
-	host   = "localhost"
-	port   = 5432
-	user   = "macbookprowoe"
-	dbname = "lenslocked_dev"
-)
+func (d Dog) Speak() {
+	fmt.Println("wooof")
+}
+
+func (c Cat) Speak() {
+	fmt.Println("meow")
+}
+
+type Husky struct {
+	Speaker
+}
+
+type SpeakerPrefixer struct {
+	Speaker
+}
+
+func (sp SpeakerPrefixer) Speak() {
+	fmt.Print("Prefix:")
+	sp.Speaker.Speak()
+}
+
+type Speaker interface {
+	Speak()
+}
 
 func main() {
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable", host, port, user, dbname)
+	h := Husky{Dog{}}
+	h.Speak() // h.Dog.Speak() --> Dog
 
-	us, err := models.NewUserService(psqlInfo)
-	if err != nil {
-		panic(err)
-	}
-	defer us.Close()
-	us.DestructiveReset()
-	//us.AutoMigrate()
-	user := models.User{
-		Name:     "Jon Jon",
-		Email:    "jon@jon.com",
-		Password: "jon",
-		Remember: "abc123",
-	}
+	// Husky doesn't care if we pass in Cat or Dog as long as the Speak method is on the Struct
+	// cause we pass the interface Spaker into Huskey which just has a Speak method
+	p := Husky{Cat{}}
+	p.Speak() // p.Cat.Speak() --> Meow
 
-	err = us.Create(&user)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(user)
-
-	user2, err := us.ByRemember("abc123")
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(user2)
+	// something about chaining interfaces
+	t := Husky{SpeakerPrefixer{Cat{}}}
+	t.Speak() // --> Prefix: meow
 }
