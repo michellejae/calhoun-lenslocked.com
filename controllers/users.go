@@ -40,7 +40,7 @@ type SignupForm struct {
 	Password string `schema:"password"`
 }
 
-// Create is u sed to process the signup form when a user submits it. This is used to create a new user account
+// Create is used to process the signup form when a user submits it. This is used to create a new user account
 // POST /signup
 func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 

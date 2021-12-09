@@ -2,7 +2,6 @@ package models
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -77,15 +76,19 @@ type UserService interface {
 
 // user service now only handles authenticate
 // accesses userGorm in order to acccess DB
+// accesses userValid to validate and normalize
 func NewUserService(connectionInfo string) (UserService, error) {
 	ug, err := newUserGorm(connectionInfo)
 	if err != nil {
 		return nil, err
 	}
+	hmac := hash.NewHmac(hmacSecretKey)
+	uv := &userValidator{
+		hmac:   hmac,
+		UserDB: ug,
+	}
 	return &userService{
-		UserDB: &userValidator{
-			UserDB: ug,
-		},
+		UserDB: uv,
 	}, nil
 }
 
@@ -123,10 +126,82 @@ func (us *userService) Authenticate(email, password string) (*User, error) {
 	return foundUser, nil
 }
 
+type userValFunc func(*User) error
+
+func runUserValFuncs(user *User, fns ...userValFunc) error {
+	for _, fn := range fns {
+		if err := fn(user); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 var _ UserDB = &userValidator{}
 
 type userValidator struct {
 	UserDB
+	hmac hash.HMAC
+}
+
+// ByRemember will hash the remember token and then call ByRemember on the subsequent UserDB layer
+// which i believe is the userGorm ByRemember
+func (uv *userValidator) ByRemember(token string) (*User, error) {
+	rememberHash := uv.hmac.Hash(token)
+	return uv.UserDB.ByRemember(rememberHash) //
+}
+
+//Creat provided user and backfill data like the ID, CreatedAt and UpdatedAt fields
+func (uv *userValidator) Create(user *User) error {
+	if err := runUserValFuncs(user, uv.bcryptPassword); err != nil {
+		return err
+	}
+	if user.Remember == "" {
+		token, err := rand.RememberToken()
+		if err != nil {
+			return err
+		}
+		user.Remember = token
+	}
+	user.RememberHash = uv.hmac.Hash(user.Remember)
+	return uv.UserDB.Create(user)
+}
+
+// update will hash a remember token if it's provided
+func (uv *userValidator) Update(user *User) error {
+	if err := runUserValFuncs(user, uv.bcryptPassword); err != nil {
+		return err
+	}
+	if user.Remember != "" {
+		user.RememberHash = uv.hmac.Hash(user.Remember)
+	}
+	return uv.UserDB.Update(user)
+}
+
+func (uv *userValidator) Delete(id uint) error {
+	if id == 0 {
+		return ErrInvalidID
+	}
+	return uv.UserDB.Delete(id)
+}
+
+// method will only hash password
+// will not validate if it's correct length or meets requirement
+// uses predefined pepper
+func (uv *userValidator) bcryptPassword(user *User) error {
+	// if password is empty string return nil cause we will not hash empty
+	if user.Password == "" {
+		return nil
+	}
+	pwBytes := []byte(user.Password + userPwPepper)
+	hashedBytes, err := bcrypt.GenerateFromPassword(pwBytes, bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	user.PasswordHash = string(hashedBytes)
+	user.Password = ""
+	return nil
+
 }
 
 // underscore tells compiler that this variable will never actually be used
@@ -140,17 +215,14 @@ func newUserGorm(connectionInfo string) (*userGorm, error) {
 	if err != nil {
 		return nil, err
 	}
-	db.LogMode(true)
-	hmac := hash.NewHmac(hmacSecretKey)
+	db.LogMode(true) // just logging every action to terminal that gorm has with DB, turn off for prod
 	return &userGorm{
-		db:   db,
-		hmac: hmac,
+		db: db,
 	}, nil
 }
 
 type userGorm struct {
-	db   *gorm.DB
-	hmac hash.HMAC
+	db *gorm.DB
 }
 
 func (ug *userGorm) ByID(id uint) (*User, error) {
@@ -170,43 +242,19 @@ func (ug *userGorm) ByEmail(email string) (*User, error) {
 }
 
 // looks up a user with the given remember token and retunr thats user
-// this method will handle hashing the token for us
-// errors are the same as byEmail
-func (ug *userGorm) ByRemember(token string) (*User, error) {
-
+// this method expects the remember token to already be hashed
+func (ug *userGorm) ByRemember(rememberHash string) (*User, error) {
 	var user User
-	rememberHash := ug.hmac.Hash(token)
-	fmt.Println("HERERRE", rememberHash)
 	// query has to use remember_hash even though we save it as RememberHash down below
 	err := first(ug.db.Where("remember_hash = ?", rememberHash), &user)
 	if err != nil {
 		return nil, err
 	}
-
 	return &user, nil
-
 }
 
-//Creat provided user and backfill data like the ID, CreatedAt and UpdatedAt fields
+//Creates the user in the actual DB with data provided
 func (ug *userGorm) Create(user *User) error {
-	pwBytes := []byte(user.Password + userPwPepper)
-	hashedBytes, err := bcrypt.GenerateFromPassword(pwBytes, bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-	user.PasswordHash = string(hashedBytes)
-	user.Password = ""
-
-	if user.Remember == "" {
-		token, err := rand.RememberToken()
-		if err != nil {
-			return err
-		}
-		user.Remember = token
-	}
-
-	user.RememberHash = ug.hmac.Hash(user.Remember)
-
 	return ug.db.Create(user).Error
 }
 
@@ -214,18 +262,11 @@ func (ug *userGorm) Create(user *User) error {
 // note that you ahve to provide ALL fields whether their data is updatd or not
 // ie if the email is staying the same and you don't provide it, it will delete
 func (ug *userGorm) Update(user *User) error {
-	if user.Remember != "" {
-		user.RememberHash = ug.hmac.Hash(user.Remember)
-	}
 	return ug.db.Save(user).Error
 }
 
 // will delete the user with the provided ID
 func (ug *userGorm) Delete(id uint) error {
-	if id == 0 {
-		return ErrInvalidID
-	}
-
 	// have to actually specify model to get acces to gorm.Model to get the ID
 	user := User{Model: gorm.Model{ID: id}}
 	return ug.db.Delete(&user).Error
