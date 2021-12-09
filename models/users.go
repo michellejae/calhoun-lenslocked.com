@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -108,6 +109,7 @@ type userService struct {
 // we keep this as a userService method cause though we have to grab info from DB
 // it's not really doing anything with DB. it's more about the USER
 func (us *userService) Authenticate(email, password string) (*User, error) {
+	// this is the uv byEmail
 	foundUser, err := us.ByEmail(email)
 	if err != nil {
 		return nil, err
@@ -144,6 +146,17 @@ type userValidator struct {
 	hmac hash.HMAC
 }
 
+// ByEmail will normlize the email addresss before calling ByEmail on the UserField
+func (uv *userValidator) ByEmail(email string) (*User, error) {
+	user := User{
+		Email: email,
+	}
+	if err := runUserValFuncs(&user, uv.normalizeEmail); err != nil {
+		return nil, err
+	}
+	return uv.UserDB.ByEmail(user.Email)
+}
+
 // ByRemember will hash the remember token and then call ByRemember on the subsequent UserDB layer
 // which i believe is the userGorm ByRemember
 func (uv *userValidator) ByRemember(token string) (*User, error) {
@@ -160,7 +173,11 @@ func (uv *userValidator) ByRemember(token string) (*User, error) {
 //Creat provided user and backfill data like the ID, CreatedAt and UpdatedAt fields
 func (uv *userValidator) Create(user *User) error {
 	// setRemember has to go before hmacRemember
-	err := runUserValFuncs(user, uv.bcryptPassword, uv.setRememberIfUnset, uv.hmacRemember)
+	err := runUserValFuncs(user,
+		uv.bcryptPassword,
+		uv.setRememberIfUnset,
+		uv.hmacRemember,
+		uv.normalizeEmail)
 	if err != nil {
 		return err
 	}
@@ -170,7 +187,7 @@ func (uv *userValidator) Create(user *User) error {
 // update will hash a remember token if it's provided
 func (uv *userValidator) Update(user *User) error {
 
-	err := runUserValFuncs(user, uv.bcryptPassword, uv.hmacRemember)
+	err := runUserValFuncs(user, uv.bcryptPassword, uv.hmacRemember, uv.normalizeEmail)
 	if err != nil {
 		return err
 	}
@@ -242,6 +259,17 @@ func (uv *userValidator) idGreatThan(n uint) userValFunc {
 // 	}
 // 	return nil
 // }
+
+// don't have to use this on Authenticate cause we use ByEmail inside of it so it's normalized in that func
+// otherwise this method wil be used on uv's ByEmail, Create and Update
+// lower cases all emaill addresses from users
+// trims white spaces
+// then sends to the ByEmail method on ug to send to DB
+func (uv *userValidator) normalizeEmail(user *User) error {
+	user.Email = strings.ToLower(user.Email)
+	user.Email = strings.TrimSpace(user.Email)
+	return nil
+}
 
 // underscore tells compiler that this variable will never actually be used
 // however setting UserDB to the userGorm ensures that the userGorm type always matches UserDB interface
