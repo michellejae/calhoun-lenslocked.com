@@ -159,14 +159,8 @@ func (uv *userValidator) ByRemember(token string) (*User, error) {
 
 //Creat provided user and backfill data like the ID, CreatedAt and UpdatedAt fields
 func (uv *userValidator) Create(user *User) error {
-	if user.Remember == "" {
-		token, err := rand.RememberToken()
-		if err != nil {
-			return err
-		}
-		user.Remember = token
-	}
-	err := runUserValFuncs(user, uv.bcryptPassword, uv.hmacRemember)
+	// setRemember has to go before hmacRemember
+	err := runUserValFuncs(user, uv.bcryptPassword, uv.setRememberIfUnset, uv.hmacRemember)
 	if err != nil {
 		return err
 	}
@@ -213,6 +207,19 @@ func (uv *userValidator) hmacRemember(user *User) error {
 		return nil
 	}
 	user.RememberHash = uv.hmac.Hash(user.Remember)
+	return nil
+}
+
+// only will be used on Create method as if we update a user we don't want to update the remember token
+func (uv *userValidator) setRememberIfUnset(user *User) error {
+	if user.Remember != "" {
+		return nil
+	}
+	token, err := rand.RememberToken()
+	if err != nil {
+		return err
+	}
+	user.Remember = token
 	return nil
 }
 
