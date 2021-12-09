@@ -178,8 +178,11 @@ func (uv *userValidator) Update(user *User) error {
 }
 
 func (uv *userValidator) Delete(id uint) error {
-	if id == 0 {
-		return ErrInvalidID
+	var user User
+	user.ID = id
+	err := runUserValFuncs(&user, uv.idGreatThan(0))
+	if err != nil {
+		return err
 	}
 	return uv.UserDB.Delete(id)
 }
@@ -222,6 +225,23 @@ func (uv *userValidator) setRememberIfUnset(user *User) error {
 	user.Remember = token
 	return nil
 }
+
+// same as functino as the one below but it uses closures and functions as paramenters
+func (uv *userValidator) idGreatThan(n uint) userValFunc {
+	return userValFunc(func(user *User) error {
+		if user.ID <= n {
+			return ErrInvalidID
+		}
+		return nil
+	})
+}
+
+// func (uv *userValidator) idGreaterThanZero(user *User) error {
+// 	if user.ID <= 0 {
+// 		return ErrInvalidID
+// 	}
+// 	return nil
+// }
 
 // underscore tells compiler that this variable will never actually be used
 // however setting UserDB to the userGorm ensures that the userGorm type always matches UserDB interface
