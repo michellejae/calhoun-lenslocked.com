@@ -80,30 +80,33 @@ type LoginForm struct {
 // and then login the user if correct
 // POST / login
 func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
-
+	vd := views.Data{}
 	form := LoginForm{}
 
 	if err := parseForm(r, &form); err != nil {
-		panic(err)
+		log.Println(err)
+		vd.SetAlert(err)
+		u.LoginView.Render(w, vd)
+		return
 	}
 
 	user, err := u.us.Authenticate(form.Email, form.Password)
 	if err != nil {
 		switch err {
 		case models.ErrNotFound:
-			fmt.Fprintln(w, "Invalid Email Address")
-		case models.ErrPasswordIncorrect:
-			fmt.Fprintln(w, "Invalid Password")
+			vd.AlertError("Invalid email address")
 		default:
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			vd.SetAlert(err)
 		}
-
+		u.LoginView.Render(w, vd)
+		return
 	}
 
 	// user is already a pointre cause that's what returned by authenticate method
 	err = u.signIn(w, user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		vd.SetAlert(err)
+		u.LoginView.Render(w, vd)
 		return
 	}
 	http.Redirect(w, r, "/cookietest", http.StatusFound)
