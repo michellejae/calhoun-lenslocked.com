@@ -28,7 +28,16 @@ type Users struct {
 // New is used to render the form where a user can create a new user account
 // Get /signup
 func (u *Users) New(w http.ResponseWriter, r *http.Request) {
-	if err := u.NewView.Render(w, nil); err != nil {
+	type Alert struct {
+		Level   string
+		Message string
+	}
+
+	a := Alert{
+		Level:   "warning",
+		Message: "Successfully rendered a dynamic alert!",
+	}
+	if err := u.NewView.Render(w, a); err != nil {
 		panic(err)
 	}
 }

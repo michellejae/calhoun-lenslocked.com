@@ -9,7 +9,8 @@
   <body>
     {{template "navbar"}}
     <div class="container-fluid">
-    {{template "alert"}}
+        {{template "alert" .}}
+       
            <!-- render the template called yield with all the data that passed in-->
         {{template "yield" .}}
         {{template "footer"}}
