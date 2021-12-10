@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"regexp"
 	"strings"
 
 	"github.com/jinzhu/gorm"
@@ -19,6 +20,10 @@ var (
 	ErrInvalidID = errors.New("models: id provided was invalid")
 	// return when authentenicate gets incorrect password
 	ErrInvalidPassword = errors.New("models: incorrect password provided")
+	// returned when an email aqddrss is not provided when creating a user
+	ErrEmailRequired = errors.New("models: Email address is rerquired")
+	// return when an email address provided does not match our requirements
+	ErrEmailInvalid = errors.New("models: Email address is not valid")
 )
 
 const userPwPepper = "booopity-beep-berp"
@@ -141,9 +146,19 @@ func runUserValFuncs(user *User, fns ...userValFunc) error {
 
 var _ UserDB = &userValidator{}
 
+func newUserValidator(udb UserDB, hmac hash.HMAC) *userValidator {
+	return &userValidator{
+		UserDB: udb,
+		hmac:   hmac,
+		// emailRegex is used to match email addresses. it is not perfect but works okay for now
+		emailRegex: regexp.MustCompile(`^[a-z0-9._%+\-]+@+[a-z0-9.\-]+\.[a-z]{2,16}$`),
+	}
+}
+
 type userValidator struct {
 	UserDB
-	hmac hash.HMAC
+	hmac       hash.HMAC
+	emailRegex *regexp.Regexp
 }
 
 // ByEmail will normlize the email addresss before calling ByEmail on the UserField
@@ -177,7 +192,9 @@ func (uv *userValidator) Create(user *User) error {
 		uv.bcryptPassword,
 		uv.setRememberIfUnset,
 		uv.hmacRemember,
-		uv.normalizeEmail)
+		uv.normalizeEmail,
+		uv.requireEmail,
+		uv.emailFormat)
 	if err != nil {
 		return err
 	}
@@ -187,7 +204,12 @@ func (uv *userValidator) Create(user *User) error {
 // update will hash a remember token if it's provided
 func (uv *userValidator) Update(user *User) error {
 
-	err := runUserValFuncs(user, uv.bcryptPassword, uv.hmacRemember, uv.normalizeEmail)
+	err := runUserValFuncs(user,
+		uv.bcryptPassword,
+		uv.hmacRemember,
+		uv.normalizeEmail,
+		uv.requireEmail,
+		uv.emailFormat)
 	if err != nil {
 		return err
 	}
@@ -268,6 +290,23 @@ func (uv *userValidator) idGreatThan(n uint) userValFunc {
 func (uv *userValidator) normalizeEmail(user *User) error {
 	user.Email = strings.ToLower(user.Email)
 	user.Email = strings.TrimSpace(user.Email)
+	return nil
+}
+
+func (uv *userValidator) requireEmail(user *User) error {
+	if user.Email == "" {
+		return ErrEmailRequired
+	}
+	return nil
+}
+
+func (uv *userValidator) emailFormat(user *User) error {
+	if user.Email == "" {
+		return nil
+	}
+	if !uv.emailRegex.MatchString(user.Email) {
+		return ErrEmailInvalid
+	}
 	return nil
 }
 
