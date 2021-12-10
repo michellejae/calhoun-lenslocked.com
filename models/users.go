@@ -1,7 +1,6 @@
 package models
 
 import (
-	"errors"
 	"regexp"
 	"strings"
 
@@ -10,30 +9,6 @@ import (
 	"gitlab.com/michellejae/lenslocked.com/hash"
 	"gitlab.com/michellejae/lenslocked.com/rand"
 	"golang.org/x/crypto/bcrypt"
-)
-
-var (
-	// return when a resource cannot be found in DB
-	ErrNotFound = errors.New("models: resource not found")
-
-	// returned when an invalid id is provided to a mehod like delete
-	ErrIDInvalid = errors.New("models: id provided was invalid")
-	// return when authentenicate gets incorrect password
-	ErrPasswordIncorrect = errors.New("models: incorrect password provided")
-	// returned when an email aqddrss is not provided when creating a user
-	ErrEmailRequired = errors.New("models: Email address is rerquired")
-	// return when an email address provided does not match our requirements
-	ErrEmailInvalid = errors.New("models: Email address is not valid")
-	// returns when the email addrss provided is already used by another user
-	ErrEmailTaken = errors.New("models: Email address is already taken")
-	// returns when the password provided is not as long as we require on upate or create
-	ErrPassworTooShort = errors.New("models: password must be at least 8 chracters long")
-	// returns when a create is attempted without a user password provided
-	ErrPasswordRequired = errors.New("models: password is required")
-	// returns if a remember token is not at least 32 bytes
-	ErrRememberTooShort = errors.New("models: remember token must be at least 32 bytes")
-	// returned when a create or update is attempted without a user remember hash
-	ErrRememberRequired = errors.New("models: remember token is required")
 )
 
 const userPwPepper = "booopity-beep-berp"
@@ -376,7 +351,7 @@ func (uv *userValidator) passwordMinLength(user *User) error {
 		return nil
 	}
 	if len(user.Password) < 8 {
-		return ErrPassworTooShort
+		return ErrPasswordTooShort
 	}
 	return nil
 }
