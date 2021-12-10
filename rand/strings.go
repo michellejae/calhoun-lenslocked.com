@@ -18,6 +18,15 @@ func Bytes(n int) ([]byte, error) {
 	return b, nil
 }
 
+// returns the number of bytes used in the base64 URL encoded string
+func NBytes(base64string string) (int, error) {
+	b, err := base64.URLEncoding.DecodeString(base64string)
+	if err != nil {
+		return -1, err
+	}
+	return len(b), nil
+}
+
 // will generate a byte slice of size nBytes and then
 // return a string that is the base64 URL encoded version
 // of that byte slice
