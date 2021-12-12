@@ -68,16 +68,13 @@ type UserService interface {
 // user service now only handles authenticate
 // accesses userGorm in order to acccess DB
 // accesses userValid to validate and normalize
-func NewUserService(connectionInfo string) (UserService, error) {
-	ug, err := newUserGorm(connectionInfo)
-	if err != nil {
-		return nil, err
-	}
+func NewUserService(db *gorm.DB) UserService {
+	ug := &userGorm{db}
 	hmac := hash.NewHmac(hmacSecretKey)
 	uv := newUserValidator(ug, hmac)
 	return &userService{
 		UserDB: uv,
-	}, nil
+	}
 }
 
 var _ UserService = &userService{}
@@ -375,19 +372,6 @@ func (uv *userValidator) passwordHashRequired(user *User) error {
 // underscore tells compiler that this variable will never actually be used
 // however setting UserDB to the userGorm ensures that the userGorm type always matches UserDB interface
 var _ UserDB = &userGorm{}
-
-// connects into DB and returns a userGorm type
-// have to return this type as it has all the methods for interacting with DB
-func newUserGorm(connectionInfo string) (*userGorm, error) {
-	db, err := gorm.Open("postgres", connectionInfo)
-	if err != nil {
-		return nil, err
-	}
-	db.LogMode(true) // just logging every action to terminal that gorm has with DB, turn off for prod
-	return &userGorm{
-		db: db,
-	}, nil
-}
 
 type userGorm struct {
 	db *gorm.DB
