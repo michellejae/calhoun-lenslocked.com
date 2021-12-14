@@ -6,6 +6,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"gitlab.com/michellejae/lenslocked.com/controllers"
+	"gitlab.com/michellejae/lenslocked.com/middlewear"
 	"gitlab.com/michellejae/lenslocked.com/models"
 )
 
@@ -30,6 +31,9 @@ func main() {
 	staticC := controllers.NewStatic()
 	usersC := controllers.NewUsers(services.User)
 	galleriesC := controllers.NewGalleries(services.Gallery)
+	requireUserMw := middlewear.RequireUser{
+		UserService: services.User,
+	}
 
 	r := mux.NewRouter()
 	r.Handle("/", staticC.Home).Methods("GET")
@@ -42,8 +46,9 @@ func main() {
 	r.HandleFunc("/cookietest", usersC.CookieTest).Methods("GET")
 
 	//Gallery Routes
-	r.Handle("/galleries/new", galleriesC.New).Methods("GET")
-	r.HandleFunc("/galleries", galleriesC.Create).Methods("POST")
+
+	r.Handle("/galleries/new", requireUserMw.Apply(galleriesC.New)).Methods("GET")
+	r.HandleFunc("/galleries", requireUserMw.ApplyFn(galleriesC.Create)).Methods("POST")
 	fmt.Println("Starting the server on :3000")
 	http.ListenAndServe(":3000", r)
 }
