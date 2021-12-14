@@ -135,6 +135,30 @@ func (g *Galleries) Create(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url.Path, http.StatusFound)
 }
 
+//POST /galleries/:id/delete
+func (g *Galleries) Delete(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.gallleryByID(w, r)
+	if err != nil {
+		return
+	}
+	user := context.User(r.Context())
+	// if user lookking at the gallery, is not the gallery owner cannot edit the gallery
+	if gallery.UserID != user.ID {
+		http.Error(w, "gallery not found", http.StatusNotFound)
+		return
+	}
+	var vd views.Data
+	err = g.gs.Delete(gallery.ID)
+	if err != nil {
+		vd.SetAlert(err)
+		vd.Yield = gallery
+		g.EditView.Render(w, vd)
+		return
+	}
+	//TODO: redirct to index page
+	fmt.Fprintln(w, "successfully deleted")
+}
+
 func (g *Galleries) gallleryByID(w http.ResponseWriter, r *http.Request) (*models.Gallery, error) {
 	vars := mux.Vars(r)
 	idStr := vars["id"]
