@@ -88,7 +88,17 @@ func (g *Galleries) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	gallery.Title = form.Title
-	fmt.Fprintln(w, gallery)
+	err = g.gs.Update(gallery)
+	if err != nil {
+		vd.SetAlert(err)
+		g.EditView.Render(w, vd)
+	}
+	vd.Alert = &views.Alert{
+		Level:   views.AlertLvlSuccess,
+		Message: "Gallery succesfully updatd",
+	}
+	g.EditView.Render(w, vd)
+
 }
 
 // Create is used to process the signup form when a user submits it. This is used to create a new user account
