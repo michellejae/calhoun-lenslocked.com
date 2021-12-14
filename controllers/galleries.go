@@ -77,8 +77,10 @@ func (g *Galleries) Edit(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "gallery not found", http.StatusNotFound)
 		return
 	}
+
 	var vd views.Data
 	vd.Yield = gallery
+	vd.User = user
 	g.EditView.Render(w, vd)
 }
 
