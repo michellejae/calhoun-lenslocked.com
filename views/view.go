@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+
+	"gitlab.com/michellejae/lenslocked.com/context"
 )
 
 // created variables to use in func layoutFiles so we don't have to hardcode into Glob
@@ -42,23 +44,24 @@ type View struct {
 }
 
 func (v *View) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html")
-	v.Render(w, nil)
+	v.Render(w, r, nil)
 }
 
 // render is used to render the view with pre defined layout
-func (v *View) Render(w http.ResponseWriter, data interface{}) {
-	switch data.(type) {
+func (v *View) Render(w http.ResponseWriter, r *http.Request, data interface{}) {
+	w.Header().Set("Content-Type", "text/html")
+	var vd Data
+	switch d := data.(type) {
 	case Data:
-		//
+		vd = d
 	default:
 		data = Data{
 			Yield: data,
 		}
 	}
+	vd.User = context.User(r.Context())
 	var buf bytes.Buffer
-
-	if err := v.Template.ExecuteTemplate(&buf, v.Layout, data); err != nil {
+	if err := v.Template.ExecuteTemplate(&buf, v.Layout, vd); err != nil {
 		http.Error(w, "Something went wrong. If the problem persists, please email support@lenslocked.com", http.StatusInternalServerError)
 		return
 	}
