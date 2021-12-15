@@ -29,9 +29,8 @@ type Users struct {
 // New is used to render the form where a user can create a new user account
 // Get /signup
 func (u *Users) New(w http.ResponseWriter, r *http.Request) {
-	if err := u.NewView.Render(w, nil); err != nil {
-		panic(err)
-	}
+	u.NewView.Render(w, nil)
+
 }
 
 // struct tags are not checked by compilier or something
