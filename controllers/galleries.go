@@ -2,8 +2,10 @@ package controllers
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -15,6 +17,8 @@ import (
 const (
 	ShowGallery = "show_gallery"
 	EditGallery = "edit_gallery"
+
+	maxMultiPartMem = 1 << 20 // 1 megabyte
 )
 
 func NewGalleries(gs models.GalleryService, r *mux.Router) *Galleries {
@@ -150,6 +154,73 @@ func (g *Galleries) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, url.Path, http.StatusFound)
+}
+
+//POST /galleries/:id/images
+func (g *Galleries) ImageUpload(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.gallleryByID(w, r)
+	if err != nil {
+		return
+	}
+	user := context.User(r.Context())
+	// if user lookking at the gallery, is not the gallery owner cannot edit the gallery
+	if gallery.UserID != user.ID {
+		http.Error(w, "gallery not found", http.StatusNotFound)
+		return
+	}
+
+	// TODO: parse a multipart form
+	var vd views.Data
+	vd.Yield = gallery
+	err = r.ParseMultipartForm(maxMultiPartMem)
+	if err != nil {
+		vd.SetAlert(err)
+		g.EditView.Render(w, r, vd)
+		return
+	}
+
+	// creates the file directory we want to save images too
+	galleryPath := fmt.Sprintf("images/galleries/%v/", gallery.ID)
+	err = os.MkdirAll(galleryPath, 0755)
+	if err != nil {
+		vd.SetAlert(err)
+		g.EditView.Render(w, r, vd)
+		return
+	}
+
+	// imges is the name field from form
+	// grabs all the files we upload from form
+	files := r.MultipartForm.File["images"]
+	for _, f := range files {
+		// loops through and opens every file
+		file, err := f.Open()
+		if err != nil {
+			vd.SetAlert(err)
+			g.EditView.Render(w, r, vd)
+			return
+		}
+		defer file.Close()
+
+		// open up destination file (????) i guess you cant just save file we open? we have to create a new one to save it too?
+		dst, err := os.Create(galleryPath + f.Filename)
+		if err != nil {
+			vd.SetAlert(err)
+			g.EditView.Render(w, r, vd)
+			return
+		}
+		defer dst.Close()
+
+		// copies contents to dst from file lol obviously
+		_, err = io.Copy(dst, file)
+		if err != nil {
+			vd.SetAlert(err)
+			g.EditView.Render(w, r, vd)
+			return
+		}
+	}
+
+	fmt.Fprintln(w, "Files sucessfully uploaded")
+
 }
 
 //POST /galleries/:id/delete
