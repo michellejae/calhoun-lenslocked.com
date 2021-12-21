@@ -2,10 +2,8 @@ package controllers
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -21,12 +19,13 @@ const (
 	maxMultiPartMem = 1 << 20 // 1 megabyte
 )
 
-func NewGalleries(gs models.GalleryService, r *mux.Router) *Galleries {
+func NewGalleries(gs models.GalleryService, is models.ImageService, r *mux.Router) *Galleries {
 	return &Galleries{
 		New:       views.NewView("bootstrap", "galleries/new"),
 		ShowView:  views.NewView("bootstrap", "galleries/show"),
 		EditView:  views.NewView("bootstrap", "galleries/edit"),
 		IndexView: views.NewView("bootstrap", "galleries/index"),
+		is:        is,
 		gs:        gs,
 		r:         r,
 	}
@@ -38,6 +37,7 @@ type Galleries struct {
 	EditView  *views.View
 	IndexView *views.View
 	gs        models.GalleryService
+	is        models.ImageService
 	r         *mux.Router
 }
 
@@ -168,8 +168,6 @@ func (g *Galleries) ImageUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "gallery not found", http.StatusNotFound)
 		return
 	}
-
-	// TODO: parse a multipart form
 	var vd views.Data
 	vd.Yield = gallery
 	err = r.ParseMultipartForm(maxMultiPartMem)
@@ -178,16 +176,6 @@ func (g *Galleries) ImageUpload(w http.ResponseWriter, r *http.Request) {
 		g.EditView.Render(w, r, vd)
 		return
 	}
-
-	// creates the file directory we want to save images too
-	galleryPath := fmt.Sprintf("images/galleries/%v/", gallery.ID)
-	err = os.MkdirAll(galleryPath, 0755)
-	if err != nil {
-		vd.SetAlert(err)
-		g.EditView.Render(w, r, vd)
-		return
-	}
-
 	// imges is the name field from form
 	// grabs all the files we upload from form
 	files := r.MultipartForm.File["images"]
@@ -200,18 +188,7 @@ func (g *Galleries) ImageUpload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		defer file.Close()
-
-		// open up destination file (????) i guess you cant just save file we open? we have to create a new one to save it too?
-		dst, err := os.Create(galleryPath + f.Filename)
-		if err != nil {
-			vd.SetAlert(err)
-			g.EditView.Render(w, r, vd)
-			return
-		}
-		defer dst.Close()
-
-		// copies contents to dst from file lol obviously
-		_, err = io.Copy(dst, file)
+		err = g.is.Create(gallery.ID, file, f.Filename)
 		if err != nil {
 			vd.SetAlert(err)
 			g.EditView.Render(w, r, vd)
