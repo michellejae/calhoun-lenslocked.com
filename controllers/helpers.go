@@ -13,7 +13,7 @@ func parseForm(r *http.Request, dst interface{}) error {
 	}
 	// create a decoder with schema package to decode form and save it into our signupform type
 	dec := schema.NewDecoder()
-
+	dec.IgnoreUnknownKeys(true)
 	if err := dec.Decode(dst, r.PostForm); err != nil {
 		return err
 	}

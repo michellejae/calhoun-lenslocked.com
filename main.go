@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	"gitlab.com/michellejae/lenslocked.com/controllers"
 	"gitlab.com/michellejae/lenslocked.com/middleware"
 	"gitlab.com/michellejae/lenslocked.com/models"
+	"gitlab.com/michellejae/lenslocked.com/rand"
 )
 
 const (
@@ -32,6 +34,14 @@ func main() {
 	staticC := controllers.NewStatic()
 	usersC := controllers.NewUsers(services.User)
 	galleriesC := controllers.NewGalleries(services.Gallery, services.Image, r)
+
+	// TODD: update this to be a config variable
+	isProd := false
+	b, err := rand.Bytes(32)
+	if err != nil {
+		panic(err)
+	}
+	csrfMw := csrf.Protect(b, csrf.Secure(isProd))
 	userMw := middleware.User{
 		UserService: services.User,
 	}
@@ -68,5 +78,5 @@ func main() {
 	r.HandleFunc("/galleries/{id:[0-9]+}", galleriesC.Show).Methods("GET").Name(controllers.ShowGallery)
 
 	fmt.Println("Starting the server on :3000")
-	http.ListenAndServe(":3000", userMw.Apply(r))
+	http.ListenAndServe(":3000", csrfMw(userMw.Apply(r)))
 }
