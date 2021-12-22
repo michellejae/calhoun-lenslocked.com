@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 
 	"gitlab.com/michellejae/lenslocked.com/context"
 	"gitlab.com/michellejae/lenslocked.com/models"
@@ -51,6 +52,13 @@ func (mw *RequireUser) Apply(next http.Handler) http.HandlerFunc {
 
 func (mw *RequireUser) ApplyFn(next http.HandlerFunc) http.HandlerFunc {
 	return mw.User.ApplyFn(func(w http.ResponseWriter, r *http.Request) {
+		// if the user is requesting a static asset or image we will not need to look up the current user
+		// so we skip doing it
+		path := r.URL.Path
+		if strings.HasPrefix(path, "/assets/") || strings.HasPrefix(path, "/images/") {
+			next(w, r)
+			return
+		}
 		user := context.User(r.Context())
 		if user == nil {
 			http.Redirect(w, r, "/login", http.StatusFound)
