@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -213,7 +214,7 @@ func (g *Galleries) ImageDelete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "gallery not found", http.StatusNotFound)
 		return
 	}
-	filename := mux.Vars(r)["filename"]
+	filename, _ := url.QueryUnescape(mux.Vars(r)["filename"])
 	i := models.Image{
 		Filename:  filename,
 		GalleryID: gallery.ID,
