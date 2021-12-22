@@ -5,12 +5,13 @@ import (
 	"strings"
 
 	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+
 	"gitlab.com/michellejae/lenslocked.com/hash"
 	"gitlab.com/michellejae/lenslocked.com/rand"
 	"golang.org/x/crypto/bcrypt"
 )
 
+// tooo: config this
 const userPwPepper = "booopity-beep-berp"
 const hmacSecretKey = "secret-hmac-key"
 
