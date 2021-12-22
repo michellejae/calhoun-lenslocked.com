@@ -22,7 +22,7 @@ func main() {
 
 	services, err := models.NewServices(psqlInfo)
 	if err != nil {
-		panic(err)
+		fmt.Println("Error running command:", err)
 	}
 	defer services.Close()
 	//services.DestructiveReset()
@@ -46,6 +46,11 @@ func main() {
 	r.HandleFunc("/signup", usersC.Create).Methods("POST")
 	r.Handle("/login", usersC.LoginView).Methods("GET")
 	r.HandleFunc("/login", usersC.Login).Methods("POST")
+
+	//assets
+	assetHandler := http.FileServer(http.Dir("./assets"))
+	assetHandler = http.StripPrefix("/assets", assetHandler)
+	r.PathPrefix("/assets/").Handler(assetHandler)
 
 	//image routs
 	imageHandler := http.FileServer(http.Dir("./images/"))
