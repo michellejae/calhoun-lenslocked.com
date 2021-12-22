@@ -11,10 +11,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// tooo: config this
-const userPwPepper = "booopity-beep-berp"
-const hmacSecretKey = "secret-hmac-key"
-
 // User represents the user model stored in our database
 // this is used for user accounts storing an email adddress and a password
 // so users can login and gain access to their content
@@ -62,12 +58,13 @@ type UserService interface {
 // user service now only handles authenticate
 // accesses userGorm in order to acccess DB
 // accesses userValid to validate and normalize
-func NewUserService(db *gorm.DB) UserService {
+func NewUserService(db *gorm.DB, pepper, hmacKey string) UserService {
 	ug := &userGorm{db}
-	hmac := hash.NewHmac(hmacSecretKey)
-	uv := newUserValidator(ug, hmac)
+	hmac := hash.NewHmac(hmacKey)
+	uv := newUserValidator(ug, hmac, pepper)
 	return &userService{
 		UserDB: uv,
+		pepper: pepper,
 	}
 }
 
@@ -76,6 +73,7 @@ var _ UserService = &userService{}
 // UserService type that will chain into UserDB interface
 type userService struct {
 	UserDB
+	pepper string
 }
 
 // can be used to authenticate a user with the provided email address and password
@@ -93,7 +91,7 @@ func (us *userService) Authenticate(email, password string) (*User, error) {
 		return nil, err
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(foundUser.PasswordHash), []byte(password+userPwPepper))
+	err = bcrypt.CompareHashAndPassword([]byte(foundUser.PasswordHash), []byte(password+us.pepper))
 	if err != nil {
 		switch err {
 		case bcrypt.ErrMismatchedHashAndPassword:
@@ -119,12 +117,13 @@ func runUserValFuncs(user *User, fns ...userValFunc) error {
 
 var _ UserDB = &userValidator{}
 
-func newUserValidator(udb UserDB, hmac hash.HMAC) *userValidator {
+func newUserValidator(udb UserDB, hmac hash.HMAC, pepper string) *userValidator {
 	return &userValidator{
 		UserDB: udb,
 		hmac:   hmac,
 		// emailRegex is used to match email addresses. it is not perfect but works okay for now
 		emailRegex: regexp.MustCompile(`^[a-z0-9._%+\-]+@+[a-z0-9.\-]+\.[a-z]{2,16}$`),
+		pepper:     pepper,
 	}
 }
 
@@ -132,6 +131,7 @@ type userValidator struct {
 	UserDB
 	hmac       hash.HMAC
 	emailRegex *regexp.Regexp
+	pepper     string
 }
 
 // ByEmail will normlize the email addresss before calling ByEmail on the UserField
@@ -221,7 +221,7 @@ func (uv *userValidator) bcryptPassword(user *User) error {
 	if user.Password == "" {
 		return nil
 	}
-	pwBytes := []byte(user.Password + userPwPepper)
+	pwBytes := []byte(user.Password + uv.pepper)
 	hashedBytes, err := bcrypt.GenerateFromPassword(pwBytes, bcrypt.DefaultCost)
 	if err != nil {
 		return err
