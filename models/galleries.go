@@ -5,15 +5,18 @@ import "github.com/jinzhu/gorm"
 // image container resources that visitors view
 type Gallery struct {
 	gorm.Model
-	UserID uint     `gorm:"not_null;index"`
-	Title  string   `gorm:"not_null"`
-	Images []string `gorm:"-"`
+	UserID uint    `gorm:"not_null;index"`
+	Title  string  `gorm:"not_null"`
+	Images []Image `gorm:"-"`
 }
 
-func (g *Gallery) ImagesSplitN(n int) [][]string {
-	ret := make([][]string, n)
+// counting Images and throwing them into 'buckets' or columns
+// so our Gallery pages look better
+// i would rather do thiss on front end
+func (g *Gallery) ImagesSplitN(n int) [][]Image {
+	ret := make([][]Image, n)
 	for i := 0; i < n; i++ {
-		ret[i] = make([]string, 0)
+		ret[i] = make([]Image, 0)
 	}
 	for i, img := range g.Images {
 		// % is remainder operator in go
