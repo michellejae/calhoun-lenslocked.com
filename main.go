@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 
@@ -13,8 +14,10 @@ import (
 )
 
 func main() {
-	cfg := DefaultConfig()
-	dbCfg := DefaultPostgresConfig()
+	boolPtr := flag.Bool("prod", false, "provide this flag in production. this ensures that a .config file is provided before the application starts")
+	flag.Parse()
+	cfg := LoadConfig(*boolPtr)
+	dbCfg := cfg.Database
 	services, err := models.NewServices(
 		models.WithGorm(dbCfg.Dialect(), dbCfg.ConnectionInfo()),
 		models.WithLogMode(!cfg.IsProd()),
@@ -27,7 +30,7 @@ func main() {
 	}
 	defer services.Close()
 	//services.DestructiveReset()
-	//services.AutoMigrate()
+	services.AutoMigrate()
 
 	r := mux.NewRouter()
 	staticC := controllers.NewStatic()
