@@ -2,7 +2,9 @@ package controllers
 
 import (
 	"net/http"
+	"time"
 
+	"gitlab.com/michellejae/lenslocked.com/context"
 	"gitlab.com/michellejae/lenslocked.com/models"
 	"gitlab.com/michellejae/lenslocked.com/rand"
 	"gitlab.com/michellejae/lenslocked.com/views"
@@ -84,7 +86,6 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		u.LoginView.Render(w, r, vd)
 		return
 	}
-
 	user, err := u.us.Authenticate(form.Email, form.Password)
 	if err != nil {
 		switch err {
@@ -96,7 +97,6 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		u.LoginView.Render(w, r, vd)
 		return
 	}
-
 	// user is already a pointre cause that's what returned by authenticate method
 	err = u.signIn(w, user)
 	if err != nil {
@@ -105,7 +105,25 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/galleries", http.StatusFound)
+}
 
+// logout is used to delete a users session cookie (remember_token)
+// and then we will update the user resource with a new rem token
+// POST / logout
+func (u *Users) Logout(w http.ResponseWriter, r *http.Request) {
+	cookie := http.Cookie{
+		Name:     "remember_token",
+		Value:    "",
+		Expires:  time.Now(),
+		HttpOnly: true,
+	}
+	http.SetCookie(w, &cookie)
+
+	user := context.User(r.Context())
+	token, _ := rand.RememberToken()
+	user.Remember = token
+	u.us.Update(user)
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 // used to sign the given user in via cookies
