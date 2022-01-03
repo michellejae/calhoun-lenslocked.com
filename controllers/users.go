@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"gitlab.com/michellejae/lenslocked.com/context"
+	"gitlab.com/michellejae/lenslocked.com/email"
 	"gitlab.com/michellejae/lenslocked.com/models"
 	"gitlab.com/michellejae/lenslocked.com/rand"
 	"gitlab.com/michellejae/lenslocked.com/views"
@@ -12,11 +13,12 @@ import (
 
 // NewUsers is used to create a new Users Controller
 //this function will panic if templates are not parsed correctly and should only be used during initial setup
-func NewUsers(us models.UserService) *Users {
+func NewUsers(us models.UserService, emailer *email.Client) *Users {
 	return &Users{
 		NewView:   views.NewView("bootstrap", "users/new"),
 		LoginView: views.NewView("bootstrap", "users/login"),
 		us:        us,
+		emailer:   emailer,
 	}
 }
 
@@ -24,6 +26,7 @@ type Users struct {
 	NewView   *views.View
 	LoginView *views.View
 	us        models.UserService
+	emailer   *email.Client
 }
 
 // New is used to render the form where a user can create a new user account
@@ -60,6 +63,7 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		u.NewView.Render(w, r, vd)
 		return
 	}
+	u.emailer.Welcome(user.Name, user.Email)
 	// have to use a pointer cause above user is regular user variable
 	err := u.signIn(w, &user)
 	if err != nil {

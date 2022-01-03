@@ -16,4 +16,5 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/lib/pq v1.1.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	gopkg.in/mailgun/mailgun-go.v1 v1.1.1 // indirect
 )
