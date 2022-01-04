@@ -25,6 +25,7 @@ const (
 	// attempted with a user password that is less than 8 characters.
 	ErrPasswordTooShort modelError = "models: password must be at least 8 characters long"
 	ErrTitleRequired    modelError = "models: Title is required"
+	ErrTokenInvalid     modelError = "models: Token provided is not valid"
 	// ErrRememberRequired is returned when a create or update
 	// is attempted without a user remember token hash
 	ErrRememberRequired privateError = "models: remember token is required"
