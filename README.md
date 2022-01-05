@@ -1,3 +1,3 @@
 # Lens Locked
 
-An Awesome photo gallery app written in
+An Awesome photo gallery app written in golang
